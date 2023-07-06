@@ -1,0 +1,60 @@
+# This is a simple workflow that runs the publisher and copies the output to https://<owner>.github.io/<repo>/index.html
+# Based on the instructions from Elliot Silver, available from: https://www.argentixinfo.com/archives/156
+
+# Make sure your repo has a branch called gh-pages
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: 
+      - main
+      - master
+  pull_request:
+    branches: 
+      - main
+      - master 
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v3.5.3
+        with:
+          # Repository name with owner. For example, actions/checkout
+          repository: medcomdk/dk-medcom-hospitalnotification
+          
+      - name: Update the image to the latest publisher
+        uses: docker://hl7fhir/ig-publisher-base:latest
+        with:
+          # Get the latest publisher - don't run the batch script but run the line directly
+          args: curl -L https://github.com/HL7/fhir-ig-publisher/releases/latest/download/publisher.jar -o ./input-cache/publisher.jar --create-dirs
+
+      - name: Run the IG publisher
+        uses: docker://hl7fhir/ig-publisher-base:latest
+        with:
+          # Run the publisher - don't run the batch script but run the line directly
+          args: pwd && ls && java -jar ./input-cache/publisher.jar publisher -ig .
+          
+      
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          # Artifact name
+          name: package-${{ github.sha }}.tgz
+          # A file, directory or wildcard pattern that describes what to upload
+          path: ./output/package.tgz
+          # The desired behavior if no files are found using the provided path.
+          
